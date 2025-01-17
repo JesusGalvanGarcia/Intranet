@@ -129,13 +129,29 @@ export class Admin360Component implements OnInit {
     },
     GridActions.DEFAULT_COLUMN
   )
+  public sendEmails:ColDef = Object.assign(
+    {
+      cellRendererSelector: (params: any) => {
+        const component = { component: 'gridActionButton',
+        params: { 
+          action:  GridActions.SendEmails,
+          icon: 'fa-solid fa-envelope-circle-check',
+          title:'Enviar correos de notificación'
+        }
+      };
+      return component;
+      }
+    },
+    GridActions.DEFAULT_COLUMN
+  )
   protected columnDefs: ColDef[] = [
     { headerName: 'Nombre', field: 'name',  },
     { headerName: 'Inicio', field: 'start_date',  },
     { headerName: 'Fin', field: 'end_date',},
     this.seeDetailButton,
     this.goClients,
-    this.goUsers
+    this.goUsers,
+    this.sendEmails
   
   ]
   protected columnDefsUsers: ColDef[] = [
@@ -307,6 +323,12 @@ export class Admin360Component implements OnInit {
         this.router.navigate(['360Users/' + actionEvent.data.id]);
 
       }
+      if (actionEvent.action == GridActions.SendEmails )  //verificar si no han finalizado los intentos
+      {
+        this.evaluationNumber=actionEvent.data.id;
+        this.sendEmail();
+
+      }
   }
   postApproved(id:any)
   {
@@ -321,6 +343,26 @@ export class Admin360Component implements OnInit {
     .then((response: any) => {
      this.message.success("El  reporte se ha aprobado con exito");
      this.getUsers(data,this.evaluationNumber);
+     this.isLoading=false;
+    })
+    .catch((error: any) => {
+      console.error('Error in the request:', error);
+      this.message.error(error.message+" "+error.code);
+      this.isLoading=false;
+      // Handle errors here
+    });
+  }
+  sendEmail()
+  {
+    this.isLoading=true;
+    let data = {
+      user_id:Number(localStorage.getItem("user_id")),
+      evaluation_id:this.evaluationNumber
+    };
+  
+    this.evaluations.sendEmails(data)
+    .then((response: any) => {
+     this.message.success(response.message);
      this.isLoading=false;
     })
     .catch((error: any) => {

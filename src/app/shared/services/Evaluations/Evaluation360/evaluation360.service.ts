@@ -25,6 +25,20 @@ export class Evaluation360Service {
         throw data;
       });
   }
+  sendEmails(data: any): Promise<any> {
+
+    return axios.post(environment.apiUrl + this.controllerUrl+"/sendEmails", data
+    )
+      .then(({ data }: any) => {
+        return data;
+      })
+      .catch(({ response }: any) => {
+
+        const { data } = response
+
+        throw data;
+      });
+  }
   GetAverages(data: any): Promise<any> {
     
     return axios.post(environment.apiUrl+this.controllerUrl+"/getAverages", data)

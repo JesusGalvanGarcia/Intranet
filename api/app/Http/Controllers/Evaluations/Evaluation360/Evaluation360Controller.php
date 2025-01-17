@@ -68,6 +68,37 @@ class Evaluation360Controller extends Controller
             ], 500);
         }
     }
+    public function sendEmails(Request $request)
+    {
+        $validator = Validator::make(request()->all(), [
+            'user_id' => 'Required|Integer|NotIn:0|Min:0',
+            'evaluation_id' => 'Required|Integer|NotIn:0|Min:0',
+        ]);
+
+        if ($validator->fails()) {
+
+            return response()->json([
+                'title' => 'Datos Faltantes',
+                'message' => $validator->messages()->first(),
+                'code' => $this->prefix . 'X601'
+            ], 400);
+        }    
+        $evaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
+        ->join('users', 'users.id', '=', 'user_evaluations.responsable_id')
+        ->where('user_evaluations.status_id',"!=" ,3)
+        ->distinct('user_evaluations.responsable_id') // Asegura que el responsable_id sea único
+        ->select('user_evaluations.*', 'users.*') // Selecciona los campos necesarios
+        ->get()->take(3);
+
+        foreach ($evaluations as $user) {
+            Test360Service::sendEmail360($user->name ." ".$user->father_last_name, "Evaluaciones 360" ,$user->email);
+        }
+        return response()->json([
+            'title' => 'Proceso terminado',
+            'message' => 'Se enviaron los correos correctamente',
+
+        ]);
+    }
     public function saveAnswer360(Request $request)
     {
         try {
@@ -765,7 +796,6 @@ class Evaluation360Controller extends Controller
             }
 
             $userIds = collect($request->users)->pluck('id')->toArray();
-
             foreach ($userIds as $key => $user) {
                 // Check if the user already has a FinishEvaluation record for the specified evaluation
                 $existingFinishEvaluation = FinishEvaluation::where('user_id', $user)
@@ -810,31 +840,41 @@ class Evaluation360Controller extends Controller
 
             //consulta para traer laterales
             $userLiderIds = collect($userCollaboratorLiderIds)->pluck('responsable_id')->toArray();
-
+           // return $userLiderIds;
             $userCollaboratorLiderIds2 = UserCollaborator::whereIn('user_id', $userLiderIds)
                 ->select('collaborator_id as responsable_id', 'user_id')
-                ->whereNotIn('collaborator_id', $userIds)
+                //->whereNotIn('collaborator_id', $userIds)
                 ->get();
 
+                  // Assigning identifier type and user_id
+                  $user_laterales = [];
+
+                  foreach ($userCollaboratorLiderIds as $item) {
+                    // Buscar elementos en userCollaboratorLiderIds2 que coincidan con responsable_id
+                    $list = $userCollaboratorLiderIds2->where('user_id', $item['responsable_id']);
+                    
+                    // Mapear los resultados para agregar los datos requeridos
+                    $modifiedList = $list->map(function ($item2) use ($item) {
+                        // Excluir si user_id y responsable_id son iguales
+                        if ($item2['responsable_id'] === $item['user_id']) {
+                            return null; // Retornar null para excluir este elemento
+                        }
+                        return [
+                            "responsable_id" => $item2['responsable_id'],
+                            "user_id" => $item['user_id'],
+                            "type" => 4
+                        ];
+                    })->filter()->toArray(); // Usar filter para eliminar los valores nulos
+                
+                    // Combinar los resultados en el arreglo final
+                    $user_laterales = array_merge($user_laterales, $modifiedList);
+                }
             // Assigning identifier type and user_id
-            $userCollaboratorLiderIds2 = $userCollaboratorLiderIds2->map(function ($item) use ($userCollaboratorLiderIds) {
-                // Add the new property with the desired value
-                $item['type'] = 4;
-
-                // Find the matching item in $userCollaboratorLiderIds based on responsable_id
-                $matchingItem = $userCollaboratorLiderIds->firstWhere('responsable_id', $item['user_id']);
-
-                // Set user_id based on the matching item
-                $item['user_id'] = $matchingItem ? $matchingItem['user_id'] : null;
-
-                return $item;
-            })->toArray();
-
 
             $evaluationsTotal =  array_merge(
                 $userCollaboratorIds->toArray(),
                 $userCollaboratorLiderIds->toArray(),
-                $userCollaboratorLiderIds2, //son laterales pero me equivoque en el nombre
+                $user_laterales, //son laterales pero me equivoque en el nombre
                 $userAutoevaluation->toArray(),
             );
             $userIdsTotal = collect($evaluationsTotal)->pluck('user_id')->toArray();
@@ -864,7 +904,12 @@ class Evaluation360Controller extends Controller
                 ];
             });
               // Obtener los registros existentes para la evaluación actual
-            $existingEvaluations = UserEvaluation::where([['evaluation_id', $request->evaluation_id],['user_id',$user]])->get();
+              $insertCollaboratorIds = $InsertCollaborators->pluck('user_id')->toArray();
+
+              // Obtener los registros existentes para la evaluación actual con whereIn
+              $existingEvaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
+                  ->whereIn('user_id', $insertCollaboratorIds)
+                  ->get();
 
             // Convertir los registros existentes a un array de IDs de usuarios para fácil comparación
             $existingUserIds = $existingEvaluations->pluck('responsable_id')->toArray();

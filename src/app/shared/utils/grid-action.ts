@@ -12,6 +12,7 @@ export class GridActions{
     public static readonly AddClient='Agregar Cliente';
     public static readonly AceptarReport='Aceptar Reporte';
     public static readonly VerReport='Ver Reporte';
+    public static readonly SendEmails='Enviar correos';
 
     public static readonly DEFAULT_COLUMN: ColDef = 
     {
