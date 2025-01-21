@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router } from '@angular/router';
 import { MensajeService } from '@http/mensaje.service';
 import { LoadingComponent } from '../../../app/loading/loading.component';
+import Swal from 'sweetalert2';
 
 import { GridModule } from '@sharedComponents/grid/grid.module';
 import { GridActions } from '@utils/grid-action';
@@ -98,6 +99,21 @@ export class Admin360Component implements OnInit {
     },
     GridActions.DEFAULT_COLUMN
   );
+  public deleteEvaluation: ColDef = Object.assign(
+    {
+      cellRendererSelector: (params: any) => {
+        const component = { component: 'gridActionButton',
+        params: { 
+          action:  GridActions.DELETE,
+          icon: 'fa-solid fa-trash',
+          title:'Eliminar evaluación'
+        }
+      };
+      return component;
+      }
+    },
+    GridActions.DEFAULT_COLUMN
+  );
   
   public goClients:ColDef = Object.assign(
     {
@@ -169,7 +185,8 @@ export class Admin360Component implements OnInit {
   { headerName: 'Evaluación', field: 'evaluation_name',  },
   { headerName: 'Estatus', field: 'status',  },
   { headerName: 'Evaluador', field: 'evaluator_type',  },
-  this.enableEvaluation
+  this.enableEvaluation,
+  this.deleteEvaluation
 ]
   constructor(
     private breakpointObserver: BreakpointObserver,
@@ -280,6 +297,23 @@ export class Admin360Component implements OnInit {
         // Handle errors here
       });
   }
+  deleteEvaluations(data: any) {
+    this.isLoading=true;
+    
+    this.evaluations.deleteEvaluation(data)  //Cargar examen
+      .then((response: any) => {    
+       this.message.success(response.message);
+       this.isLoading=false;
+       this.getUserPersonal(this.all_data);
+      })
+      .catch((error: any) => {
+        this.isLoading=false;
+
+        console.error('Error in the request:', error);
+        this.message.error(error.message+" "+error.code);
+        // Handle errors here
+      });
+  }
   back()
   {
     this.start=false;
@@ -352,33 +386,49 @@ export class Admin360Component implements OnInit {
       // Handle errors here
     });
   }
-  sendEmail()
-  {
-    this.isLoading=true;
-    let data = {
-      user_id:Number(localStorage.getItem("user_id")),
-      evaluation_id:this.evaluationNumber
-    };
+  sendEmail() {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: '¿Deseas enviar los correos a los usuarios seleccionados?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isLoading = true;
+        const data = {
+          user_id: Number(localStorage.getItem("user_id")),
+          evaluation_id: this.evaluationNumber
+        };
   
-    this.evaluations.sendEmails(data)
-    .then((response: any) => {
-     this.message.success(response.message);
-     this.isLoading=false;
-    })
-    .catch((error: any) => {
-      console.error('Error in the request:', error);
-      this.message.error(error.message+" "+error.code);
-      this.isLoading=false;
-      // Handle errors here
+        this.evaluations.sendEmails(data)
+          .then((response: any) => {
+            this.message.success(response.message);
+            this.isLoading = false;
+          })
+          .catch((error: any) => {
+            console.error('Error in the request:', error);
+            this.message.error(error.message + " " + error.code);
+            this.isLoading = false;
+          });
+      }
     });
   }
+  
   protected onActionEnable(actionEvent: { action: string, data: any }) {
     let data = {
       user_evaluation: actionEvent.data.user_evaluation_id,
       user_id:Number(localStorage.getItem("user_id")),
       evaluation_id:this.evaluationNumber
     };
+    if(actionEvent.action == GridActions.Seen )
     this.enableEvaluations(data);
+    if(actionEvent.action==GridActions.DELETE)
+    this.deleteEvaluations(data);
+
 }
   protected onActionEventUser(actionEvent: { action: string, data: any }) {
 
@@ -392,7 +442,6 @@ export class Admin360Component implements OnInit {
       }
       if (actionEvent.action == GridActions.Acept )  //verificar si no han finalizado los intentos
       {
-
         this.postApproved(actionEvent.data.collaborator_id);      
       }
       if (actionEvent.action == GridActions.Seen )  //verificar si no han finalizado los intentos

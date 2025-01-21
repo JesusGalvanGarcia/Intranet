@@ -163,7 +163,7 @@ average(aspect: any, question: any,autoevaluacion:any): any {
       this.processData(response.grafica_keys ,response.modules_values,'bar','promedio','Promedio general');
       this.isLoading=false;
     } catch (error:any) {
-    
+      this.isLoading=false;
       this.message.warning(error.message+" "+error.code);
     
     }

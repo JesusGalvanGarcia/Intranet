@@ -68,6 +68,32 @@ class Evaluation360Controller extends Controller
             ], 500);
         }
     }
+    public function deleteEvaluation(Request $request)
+    {
+        $validator = Validator::make(request()->all(), [
+            'user_id' => 'Required|Integer|NotIn:0|Min:0',
+            'user_evaluation' => 'Required|Integer|NotIn:0|Min:0',
+        ]);
+
+        if ($validator->fails()) {
+
+            return response()->json([
+                'title' => 'Datos Faltantes',
+                'message' => $validator->messages()->first(),
+                'code' => $this->prefix . 'X601'
+            ], 400);
+        }     
+        UserEvaluation::where("id",$request->user_evaluation)
+        ->update([
+            'deleted_at' => Carbon::now(),
+            'deleted_by' => $request->user_id, // O el ID del usuario actual
+        ]);
+        return response()->json([
+            'title' => 'Proceso terminado',
+            'message' => 'Se elimino la evaluation correctamente',
+
+        ]);
+    }
     public function sendEmails(Request $request)
     {
         $validator = Validator::make(request()->all(), [
@@ -936,21 +962,28 @@ class Evaluation360Controller extends Controller
                     return !in_array($collaborator['responsable_id'], $existingUserIds);
                 }
             );
-        
-            // Insertar los nuevos registros
-            if (!empty($toInsert)) {
-                UserEvaluation::insert($toInsert);
-            }
+            $batchSize = 100;
 
+            // Dividir en lotes más pequeños
+            $batches = array_chunk($toInsert, $batchSize);
             
+            // Insertar los nuevos registros
+            foreach ($batches as $batch) {
+                if (!empty($batch)) {
+                    UserEvaluation::insert($batch);
+                }
+            }
             //$newEvaluations = UserEvaluation::insert($InsertCollaborators->toArray());
             //consultar los id con  los que fueron creados
-            $user_evaluation_ids = UserEvaluation::whereIn('user_id', $userIdsTotal)
+            $user_evaluation_all = UserEvaluation::whereIn('user_id', $userIdsTotal)
                 ->whereIn('responsable_id', $userRespTotal)
                 ->where('process_id', 7)
                 ->where('evaluation_id', $request->evaluation_id)
-                ->pluck('id')
-                ->toArray();
+                ->get();
+               
+            $user_evaluation_ids = $user_evaluation_all 
+            ->pluck('id')
+            ->toArray();
             //hacer un  pluck pero  de los responsable_id
             $responsables_ds = UserEvaluation::whereIn('user_id', $userIdsTotal)
                 ->whereIn('responsable_id', $userRespTotal)
@@ -961,8 +994,10 @@ class Evaluation360Controller extends Controller
             $test = Test::where('evaluation_id', $request->evaluation_id)->get();
 
             // Map and create an array of values
-            $InsertCollaboratorsTest = array_map(function ($item) use ($request, $test,$userCollaboratorIds) {
-                $testId = count($userCollaboratorIds) > 0
+            $InsertCollaboratorsTest = array_map(function ($item) use ($request, $test,$userCollaboratorIds,$user_evaluation_all) {
+                $evaluation= $user_evaluation_all->where("id",$item)->first();
+                $collaborators=$userCollaboratorIds->where("user_id",$evaluation->user_id);
+                $testId = count($collaborators) > 0
                 ? $test->first()->id // Usa el primer registro
                 : ($test[1]->id ); // Usa el segundo si existe, de lo contrario, el primero.
                 return [
@@ -980,9 +1015,16 @@ class Evaluation360Controller extends Controller
                     'deleted_at' => null,
                 ];
             }, $user_evaluation_ids);
-
             // Use createMany to insert multiple records
-            $newEvaluationsTest = UserTest::insert($InsertCollaboratorsTest);
+            $batchSize = 100; // Tamaño del lote
+            $batches = array_chunk($InsertCollaboratorsTest, $batchSize);
+            
+            foreach ($batches as $batch) {
+                if (!empty($batch)) {
+                    UserTest::insert($batch);
+                }
+            }
+            
             DB::commit();
             DB::beginTransaction();
             $userIdsMatch = collect($request->users)->pluck('id')->toArray();
@@ -1020,7 +1062,15 @@ class Evaluation360Controller extends Controller
                 ];
             });
 
-            $newPlans = UserActionPlan::insert($actionPlan->toArray());
+            $batchSize = 100; // Tamaño del lote
+            $actionPlanArray = $actionPlan->toArray(); // Convertir a array si no lo está
+            $batches = array_chunk($actionPlanArray, $batchSize);
+            
+            foreach ($batches as $batch) {
+                if (!empty($batch)) {
+                    UserActionPlan::insert($batch);
+                }
+            }
             DB::commit();
             DB::beginTransaction();
             $signature = [];
@@ -1062,10 +1112,32 @@ class Evaluation360Controller extends Controller
             }
 
             // Insertar en la base de datos
-            $newPlansActions = ActionPlanSignature::insert($signature);
-            $newPlansActionsResponsable = ActionPlanSignature::insert($signatureResponsable);
-            $PlansUser = ActionPlanSignature::insert(array_values($Colaborador));
+            $batchSize = 100; // Tamaño del lote
 
+            // Manejar $signature
+            if (!empty($signature)) {
+                $signatureBatches = array_chunk($signature, $batchSize);
+                foreach ($signatureBatches as $batch) {
+                    ActionPlanSignature::insert($batch);
+                }
+            }
+            
+            // Manejar $signatureResponsable
+            if (!empty($signatureResponsable)) {
+                $signatureResponsableBatches = array_chunk($signatureResponsable, $batchSize);
+                foreach ($signatureResponsableBatches as $batch) {
+                    ActionPlanSignature::insert($batch);
+                }
+            }
+            
+            // Manejar $Colaborador
+            if (!empty($Colaborador)) {
+                $colaboradorBatches = array_chunk(array_values($Colaborador), $batchSize);
+                foreach ($colaboradorBatches as $batch) {
+                    ActionPlanSignature::insert($batch);
+                }
+            }
+            
 
             DB::commit();
             return response()->json([
@@ -1943,6 +2015,7 @@ class Evaluation360Controller extends Controller
                     });
                   
                     $AutoevaluacionKey=$evaluatorTypes[2] ?? 'NoEvaluation';  //Tener la key de autoevaluacion (con id 2)
+                    
                     $graficaModulosObj=[];
                     $graficaModulosValues=[];
                     $graficaEvaluadorObj=[];
@@ -1952,9 +2025,18 @@ class Evaluation360Controller extends Controller
                     $AverageGeneral=0;
                     $AverageAuto=0;
                     $question_averages=[];
+                    if(count($evaluationsAll)==0)
+                    {
+                        return response()->json([
+                            'title' => 'Proceso terminado',
+                            'message' => 'Las evaluaciones de este colaborador no han sido completadas',
+                            'code'=>400
+                        ],400);
+                    }
                     $modules = TestModule::where('test_id',$evaluationsAll[0]->test_id)->get();
                     $questionPromedio=0;
                     $questionAuto=0;
+                    
                     foreach ($evaluatorTypes as $evaluatorType => $evaluatorTypeName) {
                     $evaluations = $evaluationsAll->where('evaluator_type_id',$evaluatorType );
                     $answers = UserTest::select('suggestions', 'chance', 'strengths')
@@ -1965,7 +2047,6 @@ class Evaluation360Controller extends Controller
                             ->orWhere('strengths', '<>', '');
                     })
                     ->get();
-                
                     $Comments[$evaluatorTypeName]=$answers;
                     // Inicializar el array para el tipo de evaluador actual
 

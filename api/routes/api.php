@@ -59,6 +59,7 @@ Route::post('/evaluation360/actionPlan', [Evaluation360Controller::class, 'actio
 Route::post('/evaluation360/saveAnswer360', [Evaluation360Controller::class, 'saveAnswer360'])->name('Guardar Respuesta del Usuario 360');
 Route::post('/evaluation360/finishStatus', [Evaluation360Controller::class, 'finishStatus'])->name('Guardar Respuesta del Usuario 360');
 Route::post('/evaluation360/sendEmails', [Evaluation360Controller::class, 'sendEmails'])->name('Guardar Respuesta del Usuario 360');
+Route::post('/evaluation360/deleteEvaluation', [Evaluation360Controller::class, 'deleteEvaluation'])->name('Guardar Respuesta del Usuario 360');
 
 Route::post('/evaluation360/saveSuggetions', [Evaluation360Controller::class, 'saveSuggetions'])->name('Guardar Respuesta del Usuario sugerencias 360');
 Route::post('/evaluation360/getPreview', [Evaluation360Controller::class, 'getPreview'])->name('Obtener reporte 360');
