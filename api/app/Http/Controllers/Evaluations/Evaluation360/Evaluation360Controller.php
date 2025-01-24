@@ -111,19 +111,22 @@ class Evaluation360Controller extends Controller
         }    
         $evaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
         ->join('users', 'users.id', '=', 'user_evaluations.responsable_id')
+        ->join('evaluations','evaluations.id','=','user_evaluations.evaluation_id')
         ->where('user_evaluations.status_id', '!=', 3)
         ->selectRaw('
             MIN(user_evaluations.id) as id,
             user_evaluations.responsable_id,
             users.name,
-            users.email
+            users.email,
+            users.father_last_name,
+            evaluations.end_date as end_date
         ') // Selecciona solo los campos necesarios
-        ->groupBy('user_evaluations.responsable_id', 'users.name', 'users.email', 'users.father_last_name') // Agrupa por responsable_id y columnas únicas
+        ->groupBy('user_evaluations.responsable_id', 'users.name', 'users.email', 'users.father_last_name','evaluations.end_date') // Agrupa por responsable_id y columnas únicas
         ->take(3) // Limita a 3 resultados
         ->get();
         
         foreach ($evaluations as $user) {
-            Test360Service::sendEmail360($user->name ." ".$user->father_last_name, "Evaluaciones 360" ,$user->email);
+            Test360Service::sendEmail360($user->name ." ".$user->father_last_name, "Evaluaciones 360" ,$user->email,Carbon::parse($user->end_date)->locale('es')->isoFormat('D [de] MMMM [del] YYYY'));
         }
         return response()->json([
             'title' => 'Proceso terminado',
@@ -175,7 +178,24 @@ class Evaluation360Controller extends Controller
 
             //Se valida el estado de la prueba
             $user_test = UserTest::whereIn('status_id', [1, 2, 4])->find($request->user_test_id);
+            $evaluation = Evaluation::where('id', $user_test->user_evaluation->evaluation_id)->first();
 
+            // Verifica si la evaluación existe
+            if (!$evaluation) {
+                return response()->json([
+                    'message' => 'La evaluación no existe.'
+                ], 404);
+            }
+            return $user_test;
+            if($user_test->user_evaluation->status_id!=4){
+            // Valida si la fecha actual es posterior a end_date
+            if (Carbon::now()->greaterThan(Carbon::parse($evaluation->end_date))) {
+                return response()->json([
+                    'message' => 'La evaluación ya ha expirado y no puedes continuar.',
+                    'code'=>'403'
+                ], 403);
+            }     
+            }       
             if (!$user_test)
                 return response()->json([
                     'title' => 'Prueba Invalida',

@@ -21,10 +21,10 @@ use App\Mail\Evaluations\Evaluation360\actionPlan360 as ActionPlan;
 
 class Test360Service extends ServiceProvider
 {
-    static function sendEmail360($evaluation, $name, $email)
+    static function sendEmail360($evaluation, $name, $email,$date)
     {
 
-        Mail::to($email)->send(new sendEmail360($name,$evaluation,$email));
+        Mail::to($email)->send(new sendEmail360($name,$evaluation,$email,$date));
 
     }
 

@@ -18,14 +18,17 @@ class sendEmail360 extends Mailable
     public $evaluated_user;
 
     public $email;
+    public $end_date;
     /**
      * Create a new message instance.
      */
-    public function __construct($evaluation_name, $evaluated_user, $email)
+    public function __construct($evaluation_name, $evaluated_user, $email,$end_date)
     {
         $this->evaluation_name = $evaluation_name;
         $this->evaluated_user = $evaluated_user;
         $this->email = $email;
+        $this->end_date = $end_date;
+
     }
 
     /**
@@ -38,7 +41,7 @@ class sendEmail360 extends Mailable
             replyTo: [
                 new Address('notificaciones@trintias.com', $this->evaluation_name),
             ],
-            subject: 'Evaluaciones'
+            subject: 'Evaluaciones pendientes'
         );
     }
 
@@ -52,6 +55,7 @@ class sendEmail360 extends Mailable
             with: [
                 'evaluation_name' => $this->evaluation_name,
                 'evaluated_user' => $this->evaluated_user,
+                'end_date'=>$this->end_date
             ]
         );
     }

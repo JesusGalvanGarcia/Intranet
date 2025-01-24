@@ -119,7 +119,7 @@ span.MsoHyperlinkFollowed {
                       <td align="center" style="padding:0;Margin:0;padding-bottom:10px"><h1 style="Margin:0;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:30px;font-style:normal;font-weight:bold;line-height:36px;color:#ffffff">¡Hola {{ $evaluated_user }} !</h1></td>
                      </tr>
                      <tr>
-                      <td align="center" class="es-text-3668" style="padding:0;Margin:0;padding-top:10px;padding-bottom:10px"><p style="Margin:0;mso-line-height-rule:exactly;font-family:lato, 'helvetica neue', helvetica, arial, sans-serif;line-height:30px;letter-spacing:0;color:#ffffff;font-size:20px">Tienes evaluaciones pendientes de&nbsp; {{ $evaluation_name }}</p><p style="Margin:0;mso-line-height-rule:exactly;font-family:lato, 'helvetica neue', helvetica, arial, sans-serif;line-height:30px;letter-spacing:0;color:#ffffff;font-size:20px">Haz click en el botón para redirigirte a ellas.</p></td>
+                      <td align="center" class="es-text-3668" style="padding:0;Margin:0;padding-top:10px;padding-bottom:10px"><p style="Margin:0;mso-line-height-rule:exactly;font-family:lato, 'helvetica neue', helvetica, arial, sans-serif;line-height:30px;letter-spacing:0;color:#ffffff;font-size:20px">Tienes evaluaciones pendientes de&nbsp; {{ $evaluation_name }} que finalizarán el dia {{ $end_date }}</p><p style="Margin:0;mso-line-height-rule:exactly;font-family:lato, 'helvetica neue', helvetica, arial, sans-serif;line-height:30px;letter-spacing:0;color:#ffffff;font-size:20px">Haz click en el botón para redirigirte a ellas.</p></td>
                      </tr>
                    </table></td>
                  </tr>
