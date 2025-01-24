@@ -111,11 +111,17 @@ class Evaluation360Controller extends Controller
         }    
         $evaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
         ->join('users', 'users.id', '=', 'user_evaluations.responsable_id')
-        ->where('user_evaluations.status_id',"!=" ,3)
-        ->distinct('user_evaluations.responsable_id') // Asegura que el responsable_id sea único
-        ->select('user_evaluations.*', 'users.*') // Selecciona los campos necesarios
-        ->get()->take(3);
-
+        ->where('user_evaluations.status_id', '!=', 3)
+        ->selectRaw('
+            MIN(user_evaluations.id) as id,
+            user_evaluations.responsable_id,
+            users.name,
+            users.email
+        ') // Selecciona solo los campos necesarios
+        ->groupBy('user_evaluations.responsable_id', 'users.name', 'users.email', 'users.father_last_name') // Agrupa por responsable_id y columnas únicas
+        ->take(3) // Limita a 3 resultados
+        ->get();
+        
         foreach ($evaluations as $user) {
             Test360Service::sendEmail360($user->name ." ".$user->father_last_name, "Evaluaciones 360" ,$user->email);
         }
@@ -975,7 +981,9 @@ class Evaluation360Controller extends Controller
             }
             //$newEvaluations = UserEvaluation::insert($InsertCollaborators->toArray());
             //consultar los id con  los que fueron creados
-            $user_evaluation_all = UserEvaluation::whereIn('user_id', $userIdsTotal)
+            $userIdsTotalTest = collect($toInsert)->pluck('user_id')->toArray();
+
+            $user_evaluation_all = UserEvaluation::whereIn('user_id', $userIdsTotalTest)
                 ->whereIn('responsable_id', $userRespTotal)
                 ->where('process_id', 7)
                 ->where('evaluation_id', $request->evaluation_id)
@@ -1037,7 +1045,7 @@ class Evaluation360Controller extends Controller
                 Test360Service::sendEmail360($user->name, $evaluationName, $user->email);
             }*/
 
-            $user_evaluations = UserEvaluation::whereIn('user_id', $userIdsMatch)
+            $user_evaluations = UserEvaluation::whereIn('user_id', $userIdsTotalTest)
                 ->where('evaluation_id', $request->evaluation_id)
                 ->where('process_id', 7)
                 ->where('type_evaluator_id', 1)
