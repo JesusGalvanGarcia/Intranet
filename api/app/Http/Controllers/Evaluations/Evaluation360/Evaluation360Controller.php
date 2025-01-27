@@ -982,12 +982,17 @@ class Evaluation360Controller extends Controller
 
             // Identificar registros que deben ser insertados (están en $InsertCollaborators pero no en DB)
             // Convertir la colección a un arreglo antes de usar array_filter
-            $toInsert = array_filter(
-                $InsertCollaborators->toArray(),
-                function ($collaborator) use ($existingUserIds) {
-                    return !in_array($collaborator['responsable_id'], $existingUserIds);
-                }
-            );
+            $compare=$InsertCollaborators->select('user_id','responsable_id');
+            $compare_existing=$existingEvaluations->select('user_id','responsable_id');
+            $uniqueRecords = $compare->filter(function ($newRecord) use ($compare_existing) {
+                return !$compare_existing->contains(function ($existingRecord) use ($newRecord) {
+                    return $newRecord['user_id'] == $existingRecord['user_id'] &&
+                           $newRecord['responsable_id'] == $existingRecord['responsable_id'];
+                });
+            });
+            
+            // Convertir a arreglo si es necesario
+            $toInsert = $uniqueRecords->values()->toArray();           
             $batchSize = 100;
 
             // Dividir en lotes más pequeños
