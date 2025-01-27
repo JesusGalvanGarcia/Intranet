@@ -508,7 +508,7 @@ class Evaluation360Controller extends Controller
 
             // Enviar correos electrónicos a cada usuario
             foreach ($usersData as $user) {
-                Test360Service::sendEmail360($user->name, $evaluationName, $user->email);
+                Test360Service::sendEmail360($user->name, $evaluationName, $user->email,$evaluationName->end_date);
             }
 
             // Convertir para inserts en User_evaluations
@@ -1070,14 +1070,14 @@ class Evaluation360Controller extends Controller
                 ->where('process_id', 7)
                 ->where('type_evaluator_id', 1)
                 ->get();
+            $selectPlan=ActionPlan::where('evaluation_id',$request->evaluation_id)->first();
 
-
-            $actionPlan = $user_evaluations->map(function ($item) use ($request) {
+            $actionPlan = $user_evaluations->map(function ($item) use ($request,$selectPlan) {
 
                 return [
 
                     'user_id' => $item->user_id,
-                    'action_plan_id' => 3,
+                    'action_plan_id' =>  $selectPlan->id,
                     'status_id' => 1,
                     'responsable_id' => $item->responsable_id,
                     'created_by' => $request->user_id,
@@ -1267,7 +1267,7 @@ class Evaluation360Controller extends Controller
 
             // Enviar correos electrónicos a cada usuario
             foreach ($usersData as $user) {
-                Test360Service::sendEmail360($user->name, $evaluationName, $user->email);
+                Test360Service::sendEmail360($user->name, $evaluationName, $user->email,$evaluationName->end_date);
             }
 
             foreach ($usersData as $user) {
@@ -2013,7 +2013,7 @@ class Evaluation360Controller extends Controller
                 ], 400);
         
                 $sumAverages=0;
-                $averagesByType ;
+                $averagesByType =[];
                 $sumAutoevaluacion=0;
                 $evaluationsAll = UserTestModule::select(
                     'user_test_modules.id',
@@ -2048,7 +2048,7 @@ class Evaluation360Controller extends Controller
                     $graficaModulosValues=[];
                     $graficaEvaluadorObj=[];
                     $graficaEvaluadorValue=[];
-                    $Comments;
+                    $Comments=[];
                     $evaluatorsAll=5;
                     $AverageGeneral=0;
                     $AverageAuto=0;
