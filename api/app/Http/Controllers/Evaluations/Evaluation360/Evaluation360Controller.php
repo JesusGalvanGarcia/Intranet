@@ -935,9 +935,43 @@ class Evaluation360Controller extends Controller
             //convertir para inserts en User_evaluations
             // Convert to a collection
             $evaluationsCollection = collect($evaluationsTotal);
+              // Obtener los registros existentes para la evaluación actual
+              $insertCollaboratorIds = $evaluationsCollection->pluck('user_id')->toArray();
 
+              // Obtener los registros existentes para la evaluación actual con whereIn
+              $existingEvaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
+                  //->whereIn('user_id', $insertCollaboratorIds)
+                  ->get();
+
+            // Convertir los registros existentes a un array de IDs de usuarios para fácil comparación
+            $existingUserIds = $existingEvaluations->pluck('user_id')->toArray();
+
+            // Extraer los IDs de usuario desde los nuevos colaboradores
+            $newUserIds = collect($evaluationsCollection)->pluck('user_id')->toArray();
+            DB::beginTransaction();
+            // Identificar registros que deben ser eliminados lógicamente (están en DB pero no en $InsertCollaborators)
+            $toDelete = array_diff($existingUserIds, $newUserIds);
+       
+            if (!empty($toDelete)) {
+                UserEvaluation::where('evaluation_id', $request->evaluation_id)
+                    ->whereIn('user_id', $toDelete)
+                    ->update([
+                        'deleted_at' => Carbon::now(),
+                        'deleted_by' => $request->user_id, // O el ID del usuario actual
+                    ]);
+            }
+
+            // Identificar registros que deben ser insertados (están en $InsertCollaborators pero no en DB)
+            // Convertir la colección a un arreglo antes de usar array_filter
+            $uniqueRecords = $evaluationsCollection->filter(function ($newRecord) use ($existingEvaluations) {
+                return !$existingEvaluations->contains(function ($existingRecord) use ($newRecord) {
+                    return $newRecord['user_id'] == $existingRecord['user_id'] &&
+                           $newRecord['responsable_id'] == $existingRecord['responsable_id'];
+                });
+            });
+            
             // Convertir para inserts en User_evaluations
-            $InsertCollaborators = $evaluationsCollection->map(function ($item) use ($request) {
+            $InsertCollaborators = $uniqueRecords->map(function ($item) use ($request) {
                 return [
                     'user_id' => $item['user_id'],
                     'responsable_id' => $item['responsable_id'],
@@ -955,44 +989,9 @@ class Evaluation360Controller extends Controller
                     'deleted_at' => null,
                 ];
             });
-              // Obtener los registros existentes para la evaluación actual
-              $insertCollaboratorIds = $InsertCollaborators->pluck('user_id')->toArray();
 
-              // Obtener los registros existentes para la evaluación actual con whereIn
-              $existingEvaluations = UserEvaluation::where('evaluation_id', $request->evaluation_id)
-                  ->whereIn('user_id', $insertCollaboratorIds)
-                  ->get();
-
-            // Convertir los registros existentes a un array de IDs de usuarios para fácil comparación
-            $existingUserIds = $existingEvaluations->pluck('responsable_id')->toArray();
-
-            // Extraer los IDs de usuario desde los nuevos colaboradores
-            $newUserIds = collect($InsertCollaborators)->pluck('responsable_id')->toArray();
-            DB::beginTransaction();
-            // Identificar registros que deben ser eliminados lógicamente (están en DB pero no en $InsertCollaborators)
-            $toDelete = array_diff($existingUserIds, $newUserIds);
-            if (!empty($toDelete)) {
-                UserEvaluation::where('evaluation_id', $request->evaluation_id)
-                    ->whereIn('responsable_id', $toDelete)
-                    ->update([
-                        'deleted_at' => Carbon::now(),
-                        'deleted_by' => $request->user_id, // O el ID del usuario actual
-                    ]);
-            }
-
-            // Identificar registros que deben ser insertados (están en $InsertCollaborators pero no en DB)
-            // Convertir la colección a un arreglo antes de usar array_filter
-            $compare=$InsertCollaborators->select('user_id','responsable_id');
-            $compare_existing=$existingEvaluations->select('user_id','responsable_id');
-            $uniqueRecords = $compare->filter(function ($newRecord) use ($compare_existing) {
-                return !$compare_existing->contains(function ($existingRecord) use ($newRecord) {
-                    return $newRecord['user_id'] == $existingRecord['user_id'] &&
-                           $newRecord['responsable_id'] == $existingRecord['responsable_id'];
-                });
-            });
-            
             // Convertir a arreglo si es necesario
-            $toInsert = $uniqueRecords->values()->toArray();           
+            $toInsert = $InsertCollaborators->values()->toArray();           
             $batchSize = 100;
 
             // Dividir en lotes más pequeños
