@@ -85,9 +85,11 @@ export class Users360Component implements OnInit {
     }
     let data = {
       user_id: Number(localStorage.getItem("user_id")),
+      evaluation_id:this.evaluation_id
 
     };
     this.getUsers(data);
+    this.getUsersAssing(data);
   }
   onItemChange(selectedItems: any[]) {
     this.selectedItems = selectedItems;
@@ -135,13 +137,34 @@ export class Users360Component implements OnInit {
         // Handle errors here
       });
   }
+  getUsersSelect(data: any) {
+ 
+ 
+    this.evaluation360.GetUsersSelect360(data)  //Cargar examen
+      .then((response: any) => {
+    
+        this.UsersData = response.evaluations;
+
+        this.isLoading=false;
+     
+
+      })
+      .catch((error: any) => {
+        this.isLoading=false;
+
+        console.error('Error in the request:', error);
+        this.message.error(error.message+" "+error.code);
+        // Handle errors here
+      });
+  }
+
   getUsersAssing(data: any) {
    
     this.evaluation360.GetAssing360(data)  //Cargar examen
       .then((response: any) => {
         this.isLoading=false;
         this.start=false;
-        this.selectedItems = response.existingRecords.map((item :any)=> ({ ...item, id: Number(item.id) }));
+        this.selectedItems = response.finishEvaluations.map((item :any)=> ({ ...item, id: Number(item.id) }));
       })
       .catch((error: any) => {
         this.isLoading=false;

@@ -361,14 +361,22 @@ class Evaluation360Controller extends Controller
             ->where('user_evaluations.evaluation_id', $request->evaluation_id)
             ->where('user_evaluations.type_evaluator_id', 3)
             ->get();
-        
+            $finishEvaluations=FinishEvaluation::join('users', 'finish_evaluations.user_id', '=', 'users.id')
+            ->select(
+                'finish_evaluations.user_id as id',
+                DB::raw("CONCAT(users.name, ' ', users.father_last_name, ' ', users.mother_last_name) as collaborator_name")
+            )
+            ->where('evaluation_id',$request->evaluation_id)
+            
+            ->get();
 
 
 
             return response()->json([
                 'title' => 'Proceso terminado',
                 'message' => 'Usuarios agregados correctamente',
-                'existingRecords' => $existingRecords
+                'existingRecords' => $existingRecords,
+                'finishEvaluations' => $finishEvaluations,
             ]);
         } catch (Exception $e) {
             DB::rollBack();
@@ -959,6 +967,12 @@ class Evaluation360Controller extends Controller
                         'deleted_at' => Carbon::now(),
                         'deleted_by' => $request->user_id, // O el ID del usuario actual
                     ]);
+                FinishEvaluation::where('evaluation_id', $request->evaluation_id)
+                ->whereIn('user_id', $toDelete)
+                ->update([
+                    'deleted_at' => Carbon::now(),
+                    'deleted_by' => $request->user_id, // O el ID del usuario actual
+                ]);
             }
 
             // Identificar registros que deben ser insertados (están en $InsertCollaborators pero no en DB)
