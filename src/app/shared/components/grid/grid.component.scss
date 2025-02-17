@@ -9,3 +9,14 @@ html, body {
 .download-icon{
   cursor:pointer;
 }
+/* Estilos para móviles */
+@media (max-width: 768px) {
+  .ag-theme-alpine .ag-cell {
+    font-size: 12px; /* Reducir el tamaño de la fuente */
+    padding: 4px;    /* Reducir el padding */
+  }
+
+  .ag-theme-alpine .ag-header-cell {
+    font-size: 14px; /* Reducir el tamaño de la fuente del encabezado */
+  }
+}

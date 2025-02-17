@@ -88,6 +88,21 @@ class Evaluation360Controller extends Controller
             'deleted_at' => Carbon::now(),
             'deleted_by' => $request->user_id, // O el ID del usuario actual
         ]);
+       $user_test= UserTest::where("user_evaluation_id",$request->user_evaluation)->first();
+       $user_test->update([
+            'deleted_at' => Carbon::now(),
+            //'deleted_by' => $request->user_id, // O el ID del usuario actual
+        ]);
+        UserAnswer::where("user_test_id",$user_test->id)
+        ->update([
+            'deleted_at' => Carbon::now(),
+            //'deleted_by' => $request->user_id, // O el ID del usuario actual
+        ]);
+        UserTestModule::where("user_test_id",$user_test->id)
+        ->update([
+            'deleted_at' => Carbon::now(),
+            //'deleted_by' => $request->user_id, // O el ID del usuario actual
+        ]);
         return response()->json([
             'title' => 'Proceso terminado',
             'message' => 'Se elimino la evaluation correctamente',
@@ -186,7 +201,7 @@ class Evaluation360Controller extends Controller
                     'message' => 'La evaluación no existe.'
                 ], 404);
             }
-            return $user_test;
+          
             if($user_test->user_evaluation->status_id!=4){
             // Valida si la fecha actual es posterior a end_date
             if (Carbon::now()->greaterThan(Carbon::parse($evaluation->end_date))) {
@@ -961,12 +976,31 @@ class Evaluation360Controller extends Controller
             $toDelete = array_diff($existingUserIds, $newUserIds);
        
             if (!empty($toDelete)) {
-                UserEvaluation::where('evaluation_id', $request->evaluation_id)
+             $deleted=  UserEvaluation::where('evaluation_id', $request->evaluation_id)
                     ->whereIn('user_id', $toDelete)
                     ->update([
                         'deleted_at' => Carbon::now(),
                         'deleted_by' => $request->user_id, // O el ID del usuario actual
                     ]);
+                  foreach ($deleted as $var) { 
+                    {
+                        $user_test= UserTest::where("user_evaluation_id",$var->id)->first();
+                        $user_test->update([
+                             'deleted_at' => Carbon::now(),
+                             //'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                         UserAnswer::where("user_test_id",$user_test->id)
+                         ->update([
+                             'deleted_at' => Carbon::now(),
+                          //   'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                         UserTestModule::where("user_test_id",$user_test->id)
+                         ->update([
+                             'deleted_at' => Carbon::now(),
+                          //   'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                    }
+                }
                 FinishEvaluation::where('evaluation_id', $request->evaluation_id)
                 ->whereIn('user_id', $toDelete)
                 ->update([
@@ -1266,7 +1300,7 @@ class Evaluation360Controller extends Controller
             $userIdsMatch = array_values(collect($requestUserIds)->diff($existingUserIds)->toArray());
             DB::beginTransaction();
             if (!empty($toDelete)) {
-                UserEvaluation::where('evaluation_id', $request->evaluation_id)
+                $deleted= UserEvaluation::where('evaluation_id', $request->evaluation_id)
                 ->where('user_id', $request->responsable_id)
                 ->where('type_evaluator_id', 3)
                 ->whereIn('responsable_id', $toDelete) // Asumiendo que 'user_id' es la columna correcta
@@ -1274,20 +1308,34 @@ class Evaluation360Controller extends Controller
                     'deleted_at' =>  Carbon::now()->format('Y-m-d'),
                     'deleted_by' => $request->user_id, // O el ID del usuario actual
                 ]);
-            
+                foreach ($deleted as $var) { 
+                    {
+                        $user_test= UserTest::where("user_evaluation_id",$var->id)->first();
+                        $user_test->update([
+                             'deleted_at' => Carbon::now(),
+                             //'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                         UserAnswer::where("user_test_id",$user_test->id)
+                         ->update([
+                             'deleted_at' => Carbon::now(),
+                            // 'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                         UserTestModule::where("user_test_id",$user_test->id)
+                         ->update([
+                             'deleted_at' => Carbon::now(),
+                         //    'deleted_by' => $request->user_id, // O el ID del usuario actual
+                         ]);
+                    }
+                }
             }
          
             }
 
             $usersData = User::whereIn('id', $userIdsMatch)->select('id', 'name', 'email')->get();
         
-            $evaluationName = Evaluation::where('id', $request->evaluation_id)->value('name');
+            $evaluation = Evaluation::where('id', $request->evaluation_id)->first();
 
-            // Enviar correos electrónicos a cada usuario
-            foreach ($usersData as $user) {
-                Test360Service::sendEmail360($user->name, $evaluationName, $user->email,$evaluationName->end_date);
-            }
-
+  
             foreach ($usersData as $user) {
                 $userId = isset($user['id']) ? $user['id'] : null;
                 $evaluationId = $request->evaluation_id;
@@ -1932,6 +1980,7 @@ class Evaluation360Controller extends Controller
                     ['user_test_id', $request->user_test_id],
                     ['question_id',  $question->id]
                 ])->first();
+                
                 $answer = Answer::where('id', $userAnswer->answer_id)->first();
                 if($answer->description!='NA')
                 {

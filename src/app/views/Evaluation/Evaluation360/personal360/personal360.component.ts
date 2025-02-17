@@ -76,8 +76,9 @@ scrollToElement(id:any) {
   {
     this.isLoading=true;
     let data = {
-      user_id:  this.user_id,
-      evaluation_id:this.evaluation_id
+      user_evaluation: this.user_id,
+      user_id: localStorage.getItem("user_id"),
+      evaluation_id: this.evaluation_id
     };
     this.evaluation360.changeStatus(data)
     .then((response: any) => {

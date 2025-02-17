@@ -17,7 +17,7 @@ export class GridComponent implements OnInit, OnChanges {
       resizable: true,
       sortable: true,
       filter: true,
-      floatingFilter: false,
+      floatingFilter: true,
     };
   @Input() suppressRowClickSelection: boolean = true;
   @Input() groupSelectsChildren: boolean = false;
@@ -77,7 +77,9 @@ export class GridComponent implements OnInit, OnChanges {
     }
     this.gridApi= params.api;
     this.gridColumnApi = params.columnApi;
+    
     params.api.sizeColumnsToFit();
+    
   }
 
   public actionButton(actionData: {action: string, data: any})

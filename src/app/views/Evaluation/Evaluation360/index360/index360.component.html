@@ -20,16 +20,28 @@
       </div>
       <div style="display:block">
         <!-- Button to toggle iframe visibility -->
-        <div class="center-div">
-          <button (click)="toggleIframe()" class="btn btn-success" >Video Tutorial <i class="fa-solid fa-play"></i></button>
-
+        <div class="text-center">
+          <button (click)="toggleIframe()" class="btn btn-success">
+            Video Tutorial <i class="fa-solid fa-play"></i>
+          </button>
         </div>
-      <div class="center-div">
-        <iframe *ngIf="showIframe" src="https://drive.google.com/file/d/12Ce4dr0wGmz0solNc_ZGpzrc2war9wCT/preview" width="640" height="480" allow="autoplay"></iframe>
-
-      </div>
+      <br/>
         <!-- Iframe to be toggled -->
-    </div>
+        <div class="d-flex justify-content-center" *ngIf="showIframe">
+          <div class="position-relative">
+            <!-- Iframe -->
+            <iframe src="https://miespacio.trinitas.mx/assets/844a9c68-a77e-48ee-83d5-21165f32fecf.mp4" class="frame" allow="autoplay" ></iframe>
+            <!-- Close button (X icon) -->
+        
+          </div>
+          <div class="position-relative">
+
+          <button (click)="toggleIframe()" class="btn btn-danger position-absolute top-0 end-0 m-2 p-2 rounded-circle">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        </div>
+      </div>
     
     </div>
     <div style="margin-top: 0%;">

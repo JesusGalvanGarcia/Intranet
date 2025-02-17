@@ -9,8 +9,15 @@
   border-collapse: collapse;
 }
 
-
-
+/* Efecto hover para el botón de cierre */
+.btn-danger:hover {
+  transform: scale(1.1); /* Escala ligeramente el botón al pasar el mouse */
+  transition: transform 0.2s ease; /* Transición suave */
+}
+.frame{
+  width:640px;
+  height:480px;
+}
 /* Estilos de la tabla responsiva */
 .tabla {
   display: table;
@@ -48,7 +55,13 @@
   width: 48px;
   transform: translate(-50%, -50%);
 }
+.top-n2 {
+  top: -0.5rem; /* Ajusta este valor según sea necesario */
+}
 
+.end-n2 {
+  right: -0.5rem; /* Ajusta este valor según sea necesario */
+}
 .custom-input {
     width: 50%;
     display: flex;
@@ -62,14 +75,17 @@
 }
 /* Añadir estilos para dispositivos móviles */
 @media (max-width: 768px) {
-
+  .frame{
+    width:320px;
+    height:240px;
+  }
   .colabora {
     text-align: center;
   }
 
   .custom-input {
     width: 70%;
-    display: flex;
+    display: block;
     justify-content: center;
     margin-left: 15%;
     }

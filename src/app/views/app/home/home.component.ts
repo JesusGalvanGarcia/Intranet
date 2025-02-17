@@ -67,7 +67,7 @@ export class HomeComponent implements OnInit {
   showSubMenu: string | null = null;
   getUser() {
     var user=localStorage.getItem("user_id");
-    if(user=="")
+    if(user==""||user==null)
     {
       this.router.navigate(['login']);
       this.message.error("No hay una sesión iniciada.")
@@ -88,7 +88,7 @@ export class HomeComponent implements OnInit {
     this.isLoading=true;
   
     this.getTool();
-  
+   this.getUser();
   }
   getTool()
   {
